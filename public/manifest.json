@@ -1,0 +1,27 @@
+{
+    "theme_color": "#ffffff",
+    "background_color": "#bfbfbf",
+    "icons": [
+        {
+            "purpose": "maskable",
+            "sizes": "512x512",
+            "src": "icon512_maskable.png",
+            "type": "image/png"
+        },
+        {
+            "purpose": "any",
+            "sizes": "512x512",
+            "src": "icon512_rounded.png",
+            "type": "image/png"
+        }
+    ],
+    "orientation": "any",
+    "display": "standalone",
+    "dir": "auto",
+    "lang": "en-US",
+    "name": "Demo App",
+    "short_name": "DM",
+    "description": "A demo app for PWA testing",
+    "scope": "/",
+    "start_url": "/"
+}
