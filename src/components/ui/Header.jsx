@@ -1,3 +1,4 @@
+import React from "react";
 import { Book, Menu, Sunset, Trees, Zap } from "lucide-react";
 
 import {
@@ -23,14 +24,18 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
+import { getInitials } from "@/lib/utils"; // import your helper fn here
+import { useUser } from "@/context/UserContext";
+import Link from "next/link";
 
 const Navbar1 = ({
   logo = {
-    url: "https://www.shadcnblocks.com",
+    url: "/",
     src: "https://deifkwefumgah.cloudfront.net/shadcnblocks/block/logos/shadcnblockscom-icon.svg",
     alt: "logo",
-    title: "Shadcnblocks.com",
+    title: "Healthify",
   },
   menu = [
     { title: "Home", url: "#" },
@@ -39,10 +44,10 @@ const Navbar1 = ({
       url: "#",
       items: [
         {
-          title: "Blog",
+          title: "Dashboard",
           description: "The latest industry news, updates, and info",
           icon: <Book className="size-5 shrink-0" />,
-          url: "#",
+          url: "/dashboard",
         },
         {
           title: "Company",
@@ -96,8 +101,8 @@ const Navbar1 = ({
       ],
     },
     {
-      title: "Pricing",
-      url: "#",
+      title: "Dashboard",
+      url: "/dashboard",
     },
     {
       title: "Blog",
@@ -109,6 +114,9 @@ const Navbar1 = ({
     signup: { title: "Sign up", url: "#" },
   },
 }) => {
+
+  const { user } = useUser()
+  console.log("User in Navbar:", user);
   return (
     <section className="py-4">
       <div className="container mx-auto ">
@@ -116,7 +124,7 @@ const Navbar1 = ({
         <nav className="hidden justify-between lg:flex">
           <div className="flex items-center gap-6">
             {/* Logo */}
-            <a href={logo.url} className="flex items-center gap-2">
+            <Link href={logo.url} className="flex items-center gap-2">
               <img
                 src={logo.src}
                 className="max-h-8 dark:invert"
@@ -125,7 +133,7 @@ const Navbar1 = ({
               <span className="text-lg font-semibold tracking-tighter">
                 {logo.title}
               </span>
-            </a>
+            </Link>
             <div className="flex items-center">
               <NavigationMenu>
                 <NavigationMenuList>
@@ -134,13 +142,27 @@ const Navbar1 = ({
               </NavigationMenu>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button asChild variant="outline" size="sm">
-              <a href={auth.login.url}>{auth.login.title}</a>
-            </Button>
-            <Button asChild size="sm">
-              <a href={auth.signup.url}>{auth.signup.title}</a>
-            </Button>
+
+          <div className="flex items-center gap-4">
+            {user ? (
+              <Avatar>
+                {user.profile ? (
+                  <AvatarImage src={user.profile} alt={user.name} />
+                ) : (
+                  <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                )}
+              </Avatar>
+            ) : (
+              <>
+                <Button asChild variant="outline" size="sm">
+                  <Link href={auth.login.url}>{auth.login.title}</Link>
+                </Button>
+                <Button asChild size="sm">
+                  <Link href={auth.signup.url}>{auth.signup.title}</Link>
+                </Button>
+              </>
+            )}
+
           </div>
         </nav>
 
@@ -148,13 +170,13 @@ const Navbar1 = ({
         <div className="block lg:hidden">
           <div className="flex items-center justify-between">
             {/* Logo */}
-            <a href={logo.url} className="flex items-center gap-2">
+            <Link href={logo.url} className="flex items-center gap-2">
               <img
                 src={logo.src}
                 className="max-h-8 dark:invert"
                 alt={logo.alt}
               />
-            </a>
+            </Link>
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="outline" size="icon">
@@ -164,13 +186,13 @@ const Navbar1 = ({
               <SheetContent className="overflow-y-auto">
                 <SheetHeader>
                   <SheetTitle>
-                    <a href={logo.url} className="flex items-center gap-2">
+                    <Link href={logo.url} className="flex items-center gap-2">
                       <img
                         src={logo.src}
                         className="max-h-8 dark:invert"
                         alt={logo.alt}
                       />
-                    </a>
+                    </Link>
                   </SheetTitle>
                 </SheetHeader>
                 <div className="flex flex-col gap-6 p-4">
@@ -183,12 +205,28 @@ const Navbar1 = ({
                   </Accordion>
 
                   <div className="flex flex-col gap-3">
-                    <Button asChild variant="outline">
-                      <a href={auth.login.url}>{auth.login.title}</a>
-                    </Button>
-                    <Button asChild>
-                      <a href={auth.signup.url}>{auth.signup.title}</a>
-                    </Button>
+                    {user ? (
+                      <div className="flex items-center gap-2">
+                        <Avatar>
+                          {user.profile ? (
+                            <AvatarImage src={user.profile} alt={user.name} />
+                          ) : (
+                            <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                          )}
+                        </Avatar>
+                        <span>{user.name}</span>
+                      </div>
+                    ) : (
+                      <>
+                        <Button asChild variant="outline">
+                          <Link href={auth.login.url}>{auth.login.title}</Link>
+                        </Button>
+                        <Button asChild>
+                          <Link href={auth.signup.url}>{auth.signup.title}</Link>
+                        </Button>
+                      </>
+                    )}
+
                   </div>
                 </div>
               </SheetContent>
@@ -205,9 +243,9 @@ const renderMenuItem = (item) => {
     return (
       <NavigationMenuItem key={item.title}>
         <NavigationMenuTrigger>{item.title}</NavigationMenuTrigger>
-        <NavigationMenuContent className="bg-popover text-popover-foreground">
+        <NavigationMenuContent className="bg-popover text-popover-foreground !w-80">
           {item.items.map((subItem) => (
-            <NavigationMenuLink asChild key={subItem.title} className="w-80">
+            <NavigationMenuLink asChild key={subItem.title} className="">
               <SubMenuLink item={subItem} />
             </NavigationMenuLink>
           ))}
@@ -245,15 +283,15 @@ const renderMobileMenuItem = (item) => {
   }
 
   return (
-    <a key={item.title} href={item.url} className="text-md font-semibold">
+    <Link key={item.title} href={item.url} className="text-md font-semibold">
       {item.title}
-    </a>
+    </Link>
   );
 };
 
 const SubMenuLink = ({ item }) => {
   return (
-    <a
+    <Link
       className="hover:bg-muted hover:text-accent-foreground flex select-none flex-row gap-4 rounded-md p-3 leading-none no-underline outline-none transition-colors"
       href={item.url}
     >
@@ -266,7 +304,7 @@ const SubMenuLink = ({ item }) => {
           </p>
         )}
       </div>
-    </a>
+    </Link>
   );
 };
 

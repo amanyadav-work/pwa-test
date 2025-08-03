@@ -1,3 +1,5 @@
+'use client'
+
 import { Navbar1 } from "@/components/ui/Header"
 
 const MainLayout = ({ children }) => {

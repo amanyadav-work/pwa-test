@@ -1,6 +1,8 @@
+
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-
+import { Toaster } from "@/components/ui/sonner"
+import { UserProvider } from "@/context/UserContext";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -60,9 +62,22 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased `}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 text-gray-900 `}
       >
-        {children}
+        <UserProvider>
+          {children}
+          <Toaster
+            duration={2000}
+            toastOptions={{
+              classNames: {
+                success: '!bg-green-700 !text-white',
+                error: '!bg-red-700 !text-white',
+                info: '!bg-blue-500 !text-white',
+                warning: '!bg-yellow-500 !text-black',
+              },
+            }}
+          />
+        </UserProvider>
       </body>
     </html>
   );

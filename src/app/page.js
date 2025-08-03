@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/chart'
 import { BarChart, Bar, CartesianGrid, XAxis, Tooltip } from 'recharts'
 import { Navbar1 } from '@/components/ui/Header'
+import { Hero1 } from '@/components/hero1'
 
 
 export default function Home() {
@@ -40,15 +41,9 @@ export default function Home() {
       <header className='w-full mx-auto fixed bg-background z-50 shadow-md'>
         <Navbar1 />
       </header>
-      <main className="bg-gray-50 text-gray-900">
+      <main className="container mx-auto pt-20">
         {/* Hero */}
-        <section className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-green-100 to-green-300 text-center px-6">
-          <h1 className="text-5xl font-bold mb-4">HealthSync Dashboard</h1>
-          <p className="text-lg mb-8 max-w-2xl">
-            Secure, HIPAA‑compliant healthcare SaaS. Visualize patient growth and revenue seamlessly.
-          </p>
-          <Button variant="default" size="lg">Get Started</Button>
-        </section>
+        <Hero1 />
 
         {/* Features */}
         <section className="py-20 px-6">
