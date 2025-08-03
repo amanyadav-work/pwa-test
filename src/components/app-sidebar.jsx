@@ -9,6 +9,7 @@ import {
   Frame,
   GalleryVerticalEnd,
   Map,
+  OctagonAlertIcon,
   PieChart,
   Settings2,
   SquareTerminal,
@@ -22,9 +23,17 @@ import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
+import { StatusBanner } from "@/context/OfflineStatusContext"
+import { Collapsible, CollapsibleTrigger } from "./ui/collapsible"
 
 // This is sample data.
 const data = {
@@ -167,11 +176,33 @@ export function AppSidebar({
       <SidebarContent>
         <NavMain items={data.navMain} />
         <NavProjects projects={data.projects} />
+        <SidebarGroup>
+          <SidebarGroupLabel>Application</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <Collapsible
+                key="status"
+                asChild
+                className="group/collapsible">
+                <SidebarMenuItem >
+                  <CollapsibleTrigger asChild>
+                    <SidebarMenuButton asChild>
+                      <div>
+                        <OctagonAlertIcon />
+                        <StatusBanner />
+                      </div>
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                </SidebarMenuItem>
+              </Collapsible>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={data.user} />
       </SidebarFooter>
       <SidebarRail />
-    </Sidebar>
+    </Sidebar >
   );
 }

@@ -19,7 +19,7 @@ import {
 
 const MainLayout = ({ children }) => {
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={false}>
       <AppSidebar />
       <SidebarInset>
         <header

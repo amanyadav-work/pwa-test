@@ -1,4 +1,5 @@
 'use client';
+import { useOfflineStatus } from '@/context/OfflineStatusContext';
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 export default function useFetch({
@@ -14,6 +15,8 @@ export default function useFetch({
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  const { isOfflineMode } = useOfflineStatus()
 
   // Keep latest values in refs so refetch() always uses up-to-date info
   const latestConfigRef = useRef({
@@ -40,6 +43,14 @@ export default function useFetch({
   }, [url, method, payload, headers, withAuth, onSuccess, onError]);
 
   const refetch = useCallback(async (overrideOptions = {}) => {
+
+    if (isOfflineMode) {
+      const offlineError = { message: 'You are offline' };
+      setError(offlineError.message);
+      latestConfigRef.current.onError(offlineError);
+      return;
+    }
+
     const {
       url: reqUrl = latestConfigRef.current.url,
       method: reqMethod = latestConfigRef.current.method,

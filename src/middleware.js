@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
 import { verifyToken } from './lib/verifyToken';
 
-const PUBLIC_ONLY_ROUTES = ['/login', '/signup'];
-const PUBLIC_ROUTES = ['/']; 
+const PUBLIC_ONLY_ROUTES = ['/login', '/signup','/'];
+const PUBLIC_ROUTES = []; 
 
 export async function middleware(req) {
   const { pathname } = req.nextUrl;

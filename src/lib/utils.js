@@ -18,3 +18,20 @@ export function getInitials(name) {
     return (words[0][0] + words[words.length - 1][0]).toUpperCase();
   }
 }
+
+
+export function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      resolve(reader.result);  // base64 string including prefix e.g. "data:image/png;base64,iVBORw0..."
+    };
+
+    reader.onerror = error => {
+      reject(error);
+    };
+
+    reader.readAsDataURL(file);
+  });
+}

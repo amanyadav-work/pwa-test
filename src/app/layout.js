@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/sonner"
 import { UserProvider } from "@/context/UserContext";
 import Head from "next/head";
+import { OfflineStatusProvider } from "@/context/OfflineStatusContext";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -70,20 +71,23 @@ export default function RootLayout({ children }) {
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 text-gray-900 border-t-2`}
       >
-        <UserProvider>
-          {children}
-          <Toaster
-            duration={2000}
-            toastOptions={{
-              classNames: {
-                success: '!bg-green-700 !text-white',
-                error: '!bg-red-700 !text-white',
-                info: '!bg-blue-500 !text-white',
-                warning: '!bg-yellow-500 !text-black',
-              },
-            }}
-          />
-        </UserProvider>
+        <OfflineStatusProvider>
+          <UserProvider>
+            {children}
+            <Toaster
+              duration={2000}
+              toastOptions={{
+                classNames: {
+                  success: '!bg-green-700 !text-white',
+                  error: '!bg-red-700 !text-white',
+                  info: '!bg-blue-500 !text-white',
+                  warning: '!bg-yellow-500 !text-black',
+                },
+              }}
+            />
+          </UserProvider>
+        </OfflineStatusProvider>
+
       </body>
     </html>
   );
