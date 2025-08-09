@@ -60,10 +60,11 @@ export function useVoiceAssistant({ preferredVoiceName, language = 'en-US' }) {
     (async () => {
       if (!engine) {
         await initializeEngine(setEngine, () => { }, setprogress);
-       setprogress((prev) => ({ ...prev, text: "" }));
+        setprogress((prev) => ({ ...prev, text: "" }));
       }
       if (offline) {
-        const model = await Vosk.createModel(IND_ENG);
+        const Voskjs = await import('vosk-browser');
+        const model = await Voskjs.createModel(IND_ENG);
         voskRefs.current.model = model;
       }
     })();
@@ -169,7 +170,10 @@ export function useVoiceAssistant({ preferredVoiceName, language = 'en-US' }) {
                     const sentence = match[1].trim();
                     buffer = buffer.slice(match[0].length);
                     speakQueue.current.push(sentence);
-                    processSpeakQueue();
+                    if (!isSpeaking.current) {
+                      processSpeakQueue();
+                    }
+
                   }
                   setConversation((prev) => {
                     const updated = [...prev];
@@ -181,7 +185,10 @@ export function useVoiceAssistant({ preferredVoiceName, language = 'en-US' }) {
 
               if (buffer.trim()) {
                 speakQueue.current.push(buffer.trim());
-                processSpeakQueue();
+                if (!isSpeaking.current) {
+                  processSpeakQueue();
+                }
+
               }
               setStatus('idle');
             } catch (e) {
@@ -281,7 +288,10 @@ export function useVoiceAssistant({ preferredVoiceName, language = 'en-US' }) {
 
         setConversation([...updatedConversation, { role: 'assistant', content: summary }]);
         speakQueue.current.push(summary);
-        processSpeakQueue();
+      if (!isSpeaking.current) {
+  processSpeakQueue();
+}
+
 
         setResponse(reply);
         setStructuredResponse(summary);
