@@ -1,16 +1,17 @@
 import { CreateMLCEngine } from "@mlc-ai/web-llm";
 
 
-export const initializeEngine = async (setEngine, setLoading, setProgressText) => {
+
+export const initializeEngine = async (setEngine, setLoading, setProgress) => {
 
   try {
-    const model = "SmolLM2-135M-Instruct-q0f32-MLC";
+    const model = "Llama-3.2-3B-Instruct-q4f16_1-MLC";
 
     const initProgressCallback = (progress) => {
-      console.log('[MLC Progress Raw]', progress);
       const percent = Math.floor(progress.progress * 100);
       const text = progress.text || "Loading model...";
-      setProgressText(`${text} (${percent}%) ---- Time Elapsed ${progress.timeElapsed.toFixed(2)}s`);
+      setProgress({ text: `${text} (${percent}%) ---- Time Elapsed ${progress.timeElapsed.toFixed(2)}s`, percent });
+      console.log('[MLC Progress]', { text: `${text} (${percent}%) ---- Time Elapsed ${progress.timeElapsed.toFixed(2)}s`, percent });
     };
 
     const engineInstance = await CreateMLCEngine(model, {
@@ -20,10 +21,11 @@ export const initializeEngine = async (setEngine, setLoading, setProgressText) =
     setEngine(engineInstance);
   } catch (error) {
     console.error("Error initializing MLC engine:", error);
-    setProgressText("Failed to load model. Please try again later.");
+    setProgress({ text: "Failed to load model. Please try again later.", percent: 100 });
   }
   setLoading(false);
 };
+
 
 
 export const sendMessage = async ({
@@ -39,7 +41,6 @@ export const sendMessage = async ({
 
   const newMessages = [
     ...chatLog,
-    { role: "user", content: input },
     { role: "assistant", content: "" },
   ];
   setChatLog(newMessages);
