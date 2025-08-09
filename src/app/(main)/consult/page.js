@@ -68,16 +68,18 @@ const Consult = () => {
     { code: 'hi-IN', label: 'Hindi (India)' },
   ], []);
 
+console.log(progress)
+
   return (
-    <div className="flex flex-col md:flex-row mx-auto mt-20 p-4 h-[700px] w-[500px]  overflow-hidden bg-background text-foreground ">
+    <div className="flex flex-col md:flex-row mx-auto mt-20 p-4 h-[700px] md:w-[800px]  overflow-hidden bg-background text-foreground ">
 
       {/* Sidebar: Upload */}
       {!isOfflineMode && (
-        <div className="md:w-1/3 bg-muted p-5 border-r space-y-6">
+        <div className="md:w-[300px] bg-muted p-5 border-r space-y-6">
           <Card>
             <CardHeader className="flex flex-row items-center gap-2">
-              <Upload className="w-5 h-5" />
-              <CardTitle className="text-xl">Upload Medical Images</CardTitle>
+              <Upload className="w-2 h-2" />
+              <CardTitle className="text-xs">Upload Medical Images</CardTitle>
             </CardHeader>
             <CardContent>
               <DropzoneField
@@ -126,7 +128,7 @@ const Consult = () => {
         )}
 
         {/* Progress Overlay */}
-        {(false && progress.text && progress.percent !== 100) && (
+        {(progress.text && progress.percent !== 100) && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 text-blue-400 text-sm font-mono overflow-hidden">
             {/* SVG Animated Background */}
             <svg className="absolute inset-0 w-full h-full animate-rotate opacity-10" viewBox="0 0 1440 320" preserveAspectRatio="none">

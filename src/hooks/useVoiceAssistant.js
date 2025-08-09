@@ -60,7 +60,7 @@ export function useVoiceAssistant({ preferredVoiceName, language = 'en-US' }) {
     (async () => {
       if (!engine) {
         await initializeEngine(setEngine, () => { }, setprogress);
-        setprogress({ text: "", ...progress });
+       setprogress((prev) => ({ ...prev, text: "" }));
       }
       if (offline) {
         const model = await Vosk.createModel(IND_ENG);

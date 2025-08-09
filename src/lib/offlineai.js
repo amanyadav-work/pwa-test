@@ -11,7 +11,6 @@ export const initializeEngine = async (setEngine, setLoading, setProgress) => {
       const percent = Math.floor(progress.progress * 100);
       const text = progress.text || "Loading model...";
       setProgress({ text: `${text} (${percent}%) ---- Time Elapsed ${progress.timeElapsed.toFixed(2)}s`, percent });
-      console.log('[MLC Progress]', { text: `${text} (${percent}%) ---- Time Elapsed ${progress.timeElapsed.toFixed(2)}s`, percent });
     };
 
     const engineInstance = await CreateMLCEngine(model, {
