@@ -47,7 +47,7 @@ const withPWA = withPWAInit({
   fallbacks: {
     document: '/offline.html',
   },
-  buildExcludes: [/middleware-manifest\.json$/],
+  buildExcludes: [/middleware-manifest\.json$/, /app-build-manifest\.json$/],
   maximumFileSizeToCacheInBytes: 80 * 1024 * 1024, // 80 MB
 });
 

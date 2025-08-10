@@ -26,7 +26,7 @@ export function VoiceAssistantProvider({ children, preferredVoiceName = 'Google 
     percent: 0
   });
   const [engine, setEngine] = useState(null);
-
+  const [voskDownloading, setVoskDownloading] = useState(null)
   const downloadingRef = useRef(false);
 
   const recognitionRef = useRef(null);
@@ -113,12 +113,13 @@ export function VoiceAssistantProvider({ children, preferredVoiceName = 'Google 
     if (engine || downloadingRef.current) return; // ✅ Prevent re-entry
     downloadingRef.current = true;
     async function checkAndDownload() {
-      if (offline) {
-        if (voskRefs.current.model) return; // already loaded
-        const Voskjs = await import('vosk-browser');
-        const model = await Voskjs.createModel(IND_ENG);
-        voskRefs.current.model = model;
-      }
+      setVoskDownloading(true)
+      console.log('Downloading Vosk model...')
+      if (voskRefs.current.model) return; // already loaded
+      const Voskjs = await import('vosk-browser');
+      const model = await Voskjs.createModel(IND_ENG);
+      voskRefs.current.model = model;
+      setVoskDownloading(false)
       if (!offline) return;
 
       const cached = await isModelCached();
@@ -408,25 +409,25 @@ export function VoiceAssistantProvider({ children, preferredVoiceName = 'Google 
   }, [stopListening]);
 
 
-const generateReportFromCurrentConversation = useCallback(async () => {
-  try {
-    const report = await generateHealthReport(conversation, engine, offline);
-    return report;
-  } catch (err) {
-    console.error('Generate report failed:', err);
-    return null;
-  }
-}, [conversation, engine, offline]);
+  const generateReportFromCurrentConversation = useCallback(async () => {
+    try {
+      const report = await generateHealthReport(conversation, engine, offline);
+      return report;
+    } catch (err) {
+      console.error('Generate report failed:', err);
+      return null;
+    }
+  }, [conversation, engine, offline]);
 
 
   return (
     <VoiceAssistantContext.Provider
       value={{
-        generateHealthReport:generateReportFromCurrentConversation,
+        generateHealthReport: generateReportFromCurrentConversation,
         isModelCached,
         downloadModel,
         listening: status === 'listening',
-        loading: status === 'loading',
+        loading: voskDownloading || status === 'loading',
         speaking: isSpeaking.current,
         error,
         response,
