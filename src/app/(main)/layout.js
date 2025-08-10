@@ -17,8 +17,22 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { VoiceAssistantProvider } from "@/hooks/useVoiceAssistant"
+import { useEffect } from "react"
 
 const MainLayout = ({ children }) => {
+  useEffect(() => {
+    if (
+      typeof window !== 'undefined' &&
+      'serviceWorker' in navigator &&
+      process.env.NODE_ENV === 'production'
+    ) {
+      navigator.serviceWorker
+        .register('/sw.js')
+        .then(() => console.log('✅ Service Worker registered'))
+        .catch((err) => console.error('❌ SW registration failed:', err));
+    }
+  }, []);
+
   return (
     <VoiceAssistantProvider>
       <SidebarProvider defaultOpen={false}>

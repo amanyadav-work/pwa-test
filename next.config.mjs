@@ -41,7 +41,8 @@ const customRuntimeCaching = [
 
 const withPWA = withPWAInit({
   dest: 'public',
-  register: true,
+  register: false,
+  sw: '/sw.js',
   skipWaiting: true,
   runtimeCaching: customRuntimeCaching,
   fallbacks: {
