@@ -1,64 +1,56 @@
 'use client'
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Switch } from '@/components/ui/switch'; // Adjust import path as needed
+import { Switch } from '@/components/ui/switch';
 import { useRouter, usePathname } from 'next/navigation';
 
 const OfflineStatusContext = createContext({
   isOfflineMode: false,
-  toggleOfflineMode: () => { },
+  toggleOfflineMode: () => {},
 });
 
-const OFFLINE_ALLOWED_PATHS = ['/consult', '/offline-info', '/another-offline-page']; // Add all offline-allowed routes here
+const OFFLINE_ALLOWED_PATHS = ['/consult', '/dashboard', '/offline-info', '/another-offline-page'];
 
 export const OfflineStatusProvider = ({ children }) => {
-  const [isOfflineMode, setIsOfflineMode] = useState(false);
+  const [isOfflineMode, setIsOfflineMode] = useState(!navigator.onLine); // 👈 Initialize based on actual status
   const router = useRouter();
   const pathname = usePathname();
 
-  // Load mode from localStorage on mount
+  // Automatically switch mode based on system status
   useEffect(() => {
-    const storedMode = localStorage.getItem('offlineMode');
-    if (storedMode !== null) {
-      setIsOfflineMode(storedMode === 'true');
-    }
-  }, []);
-
-  // Handle going offline automatically
-  useEffect(() => {
-    const handleOffline = () => {
-      setIsOfflineMode(true);
-      console.log('Current mode: Offline (forced by offline event)');
-      localStorage.setItem('offlineMode', 'true');
+    const handleOnline = () => {
+      console.log('Browser is online');
+      setIsOfflineMode(false);
     };
 
+    const handleOffline = () => {
+      console.log('Browser is offline');
+      setIsOfflineMode(true);
+    };
+
+    window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+
     return () => {
+      window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
 
-  // Persist offlineMode and protect routes
+  // Force redirect if offline and not in allowed route
   useEffect(() => {
-    localStorage.setItem('offlineMode', isOfflineMode.toString());
-
-    if (isOfflineMode) {
-      console.log('Current mode: Offline (manual toggle or forced)');
-      if (!OFFLINE_ALLOWED_PATHS.includes(pathname)) {
-        router.replace('/consult');
-      }
+    if (isOfflineMode && !OFFLINE_ALLOWED_PATHS.includes(pathname)) {
+      router.replace('/consult');
     }
   }, [isOfflineMode, pathname, router]);
 
-  useEffect(() => {
-    if (isOfflineMode) {
-      if (!OFFLINE_ALLOWED_PATHS.includes(pathname)) {
-        router.replace('/consult');
-      }
-    }
-  }, [pathname, isOfflineMode, router]);
-
   const toggleOfflineMode = () => {
+    // Prevent switching to online when actually offline
+    if (!navigator.onLine) {
+      console.warn("You're offline. Can't switch to online mode.");
+      return;
+    }
+
     setIsOfflineMode((prev) => !prev);
   };
 

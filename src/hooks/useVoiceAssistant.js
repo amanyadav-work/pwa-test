@@ -1,14 +1,16 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, createContext, useContext } from 'react';
 import { initializeEngine, sendMessage } from '@/lib/offlineai';
 import { GenerateAiDataGroq } from '@/actions/groq-copy';
 import { useOfflineStatus } from '@/context/OfflineStatusContext';
 import Vosk from 'vosk-browser';
+import { generateHealthReport } from '@/lib/reportGen';
 
 const IND_ENG = 'https://ccoreilly.github.io/vosk-browser/models/vosk-model-small-en-us-0.15.tar.gz';
 
-export function useVoiceAssistant({ preferredVoiceName, language = 'en-US' }) {
+const VoiceAssistantContext = createContext(null);
+export function VoiceAssistantProvider({ children, preferredVoiceName = 'Google हिन्दी', language = 'en-US' }) {
   const { isOfflineMode: offline } = useOfflineStatus();
 
   const [status, setStatus] = useState('idle');
@@ -20,10 +22,12 @@ export function useVoiceAssistant({ preferredVoiceName, language = 'en-US' }) {
   const [selectedVoice, setSelectedVoice] = useState(null);
   const [imgUrl, setImgUrl] = useState([]);
   const [progress, setprogress] = useState({
-    text: 'Loading...',
+    text: '',
     percent: 0
   });
   const [engine, setEngine] = useState(null);
+
+  const downloadingRef = useRef(false);
 
   const recognitionRef = useRef(null);
   const voskRefs = useRef({});
@@ -56,36 +60,115 @@ export function useVoiceAssistant({ preferredVoiceName, language = 'en-US' }) {
     isSpeaking.current = false;
   }, [selectedVoice, language]);
 
-  useEffect(() => {
-    (async () => {
-      if (!engine) {
-        await initializeEngine(setEngine, () => { }, setprogress);
-        setprogress((prev) => ({ ...prev, text: "" }));
+
+
+
+  const downloadModel = async () => {
+    if (engine) return; // already downloaded
+
+    setprogress({ text: "Initializing...", percent: 0 });
+
+    try {
+      const engineInstance = await initializeEngine(setEngine, () => { }, setprogress);
+      setprogress({ text: "Model loaded", percent: 100 });
+    } catch (err) {
+      console.error("Model download failed:", err);
+      setError("Model download failed");
+      setprogress({ text: "Error loading model", percent: 0 });
+    }
+  }
+
+
+  async function isModelCached(modelName = "Llama-3.2-3B-Instruct-q4f16_1-MLC") {
+    if (!("caches" in window)) return false;
+
+    // Try common MLC model URL
+    const configUrl = `https://huggingface.co/mlc-ai/${modelName}/resolve/main/mlc-chat-config.json`;
+
+    const cacheNames = await caches.keys();
+
+    for (const cacheName of cacheNames) {
+      const cache = await caches.open(cacheName);
+      const match = await cache.match(configUrl);
+
+      if (match) {
+        try {
+          const json = await match.json();
+
+          // Optional: check if it's a valid config
+          if (json?.model_type && json?.context_window_size) {
+            return true;
+          }
+        } catch (err) {
+          console.warn("Model config exists but is not valid JSON:", err);
+        }
       }
+    }
+
+    return false;
+  }
+
+
+  useEffect(() => {
+    if (engine || downloadingRef.current) return; // ✅ Prevent re-entry
+    downloadingRef.current = true;
+    async function checkAndDownload() {
       if (offline) {
+        if (voskRefs.current.model) return; // already loaded
         const Voskjs = await import('vosk-browser');
         const model = await Voskjs.createModel(IND_ENG);
         voskRefs.current.model = model;
       }
-    })();
+      if (!offline) return;
 
+      const cached = await isModelCached();
+      if (cached) {
+        await downloadModel();
+      }
+    }
+    checkAndDownload();
   }, [offline]);
+
 
   useEffect(() => {
     const synth = window.speechSynthesis;
     const loadVoices = () => {
       const availableVoices = synth.getVoices();
-      setVoices(availableVoices);
-      const voice =
+
+      // Try preferred voice first
+      let voice =
         preferredVoiceName
           ? availableVoices.find((v) => v.name === preferredVoiceName)
-          : availableVoices.find((v) => v.lang.startsWith(language)) || availableVoices[0] || null;
+          : null;
+
+      // Fallback 1: first voice with matching language
+      if (!voice) {
+        voice = availableVoices.find((v) => v.lang.startsWith(language));
+      }
+
+      // Fallback 2: fallback to a common US female voice if language is 'en-US'
+      if (!voice && language === 'en-US') {
+        voice = availableVoices.find((v) => v.name === 'Microsoft Ava Online (Natural) - English (United States)');
+      }
+
+      // Final fallback: just use the first available voice
+      if (!voice && availableVoices.length > 0) {
+        voice = availableVoices[0];
+      }
+
+      setVoices(availableVoices);
       setSelectedVoice(voice);
+      console.log('Selected voice:', voice, 'Available voices:', availableVoices);
     };
+
     loadVoices();
     synth.onvoiceschanged = loadVoices;
-    return () => { synth.onvoiceschanged = null; };
+
+    return () => {
+      synth.onvoiceschanged = null;
+    };
   }, [preferredVoiceName, language]);
+
 
   useEffect(() => {
     imgUrlRef.current = imgUrl;
@@ -143,64 +226,67 @@ export function useVoiceAssistant({ preferredVoiceName, language = 'en-US' }) {
       recognizer.on('result', (msg) => {
         const finalText = msg.result.text?.trim();
         if (!finalText || finalText === lastRecognizedText.current) return;
-
         lastRecognizedText.current = finalText;
-        console.log('Vosk result:', msg);
         stopVoskRecognition();
-        setConversation(prevConversation => {
-          const updatedConversation = [...prevConversation, { role: 'user', content: finalText }];
-          // Also update AI here
-          setResponse(finalText);
-          setStatus('loading');
+        const userMessage = { role: 'user', content: finalText };
+        setConversation(prev => [...prev, userMessage]);
+        setStatus('loading');
+        lastRecognizedText.current = finalText;
 
-          (async () => {
-            try {
-              let buffer = '';
-              await sendMessage({
-                input: finalText,
-                chatLog: updatedConversation,
-                engine,
-                setChatLog: setConversation,
-                setInput: () => { },
-                isStreamingRef: isStreaming,
-                onToken: async (token) => {
-                  buffer += token;
-                  const match = buffer.match(/(.+?[.!?])(\s|$)/);
-                  if (match) {
-                    const sentence = match[1].trim();
-                    buffer = buffer.slice(match[0].length);
-                    speakQueue.current.push(sentence);
-                    if (!isSpeaking.current) {
-                      processSpeakQueue();
-                    }
+        (async () => {
+          try {
+            let buffer = '';
+            await sendMessage({
+              input: finalText,
+              chatLog: [...conversation, userMessage],
+              engine,
+              setChatLog: setConversation,
+              setInput: () => { },
+              isStreamingRef: isStreaming,
+              onToken: async (token) => {
+                buffer += token;
 
+                const match = buffer.match(/(.+?[.!?])(\s|$)/);
+                if (match) {
+                  const sentence = match[1].trim();
+                  buffer = buffer.slice(match[0].length);
+                  speakQueue.current.push(sentence);
+                  if (!isSpeaking.current) {
+                    processSpeakQueue();
                   }
-                  setConversation((prev) => {
-                    const updated = [...prev];
-                    updated[updated.length - 1].content = buffer;
-                    return updated;
-                  });
-                },
-              });
-
-              if (buffer.trim()) {
-                speakQueue.current.push(buffer.trim());
-                if (!isSpeaking.current) {
-                  processSpeakQueue();
                 }
 
-              }
-              setStatus('idle');
-            } catch (e) {
-              console.error('AI processing error:', e);
-              setError('AI processing failed.');
-              setStatus('idle');
-            }
-          })();
+                setConversation(prev => {
+                  const updated = [...prev];
+                  const last = updated[updated.length - 1];
 
-          return updatedConversation;
-        });
+                  if (last?.role === 'assistant') {
+                    last.content = buffer;
+                  } else {
+                    updated.push({ role: 'assistant', content: buffer });
+                  }
+
+                  return [...updated];
+                });
+              },
+            });
+
+            if (buffer.trim()) {
+              speakQueue.current.push(buffer.trim());
+              if (!isSpeaking.current) {
+                processSpeakQueue();
+              }
+            }
+
+            setStatus('idle');
+          } catch (e) {
+            console.error('AI processing error:', e);
+            setError('AI processing failed.');
+            setStatus('idle');
+          }
+        })();
       });
+
 
 
       const mediaStream = await navigator.mediaDevices.getUserMedia({
@@ -288,9 +374,9 @@ export function useVoiceAssistant({ preferredVoiceName, language = 'en-US' }) {
 
         setConversation([...updatedConversation, { role: 'assistant', content: summary }]);
         speakQueue.current.push(summary);
-      if (!isSpeaking.current) {
-  processSpeakQueue();
-}
+        if (!isSpeaking.current) {
+          processSpeakQueue();
+        }
 
 
         setResponse(reply);
@@ -321,24 +407,52 @@ export function useVoiceAssistant({ preferredVoiceName, language = 'en-US' }) {
     stopListening();
   }, [stopListening]);
 
-  return {
-    listening: status === 'listening',
-    loading: status === 'loading',
-    speaking: isSpeaking.current,
-    error,
-    response,
-    structuredResponse,
-    conversation,
-    startListening,
-    stopListening,
-    stopVoice,
-    bottomRef,
-    scrollToBottom: () => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }),
-    voices,
-    selectedVoice,
-    setSelectedVoice,
-    imgUrl,
-    setImgUrl,
-    progress,
-  };
-}
+
+const generateReportFromCurrentConversation = useCallback(async () => {
+  try {
+    const report = await generateHealthReport(conversation, engine, offline);
+    return report;
+  } catch (err) {
+    console.error('Generate report failed:', err);
+    return null;
+  }
+}, [conversation, engine, offline]);
+
+
+  return (
+    <VoiceAssistantContext.Provider
+      value={{
+        generateHealthReport:generateReportFromCurrentConversation,
+        isModelCached,
+        downloadModel,
+        listening: status === 'listening',
+        loading: status === 'loading',
+        speaking: isSpeaking.current,
+        error,
+        response,
+        structuredResponse,
+        conversation,
+        startListening,
+        stopListening,
+        stopVoice,
+        bottomRef,
+        scrollToBottom: () => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }),
+        voices,
+        selectedVoice,
+        setSelectedVoice,
+        imgUrl,
+        setImgUrl,
+        progress,
+      }}
+    >
+      {children}
+    </VoiceAssistantContext.Provider>
+  );
+};
+
+// Hook to access the context
+export const useVoiceAssistant = () => {
+  const context = useContext(VoiceAssistantContext);
+  if (!context) throw new Error('useVoiceAssistant must be used within a VoiceAssistantProvider');
+  return context;
+};

@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { useVoiceAssistant } from '@/hooks/useVoiceAssistant';
 import { uploadImage } from '@/lib/cloudinary';
 import Markdown from 'react-markdown';
 import { DropzoneField } from '@/components/DropzoneField';
 import { useOfflineStatus } from '@/context/OfflineStatusContext';
-
+import ReactMarkdown from 'react-markdown';
+import 'github-markdown-css/github-markdown.css';
 import {
   Mic,
   MicOff,
@@ -23,14 +23,14 @@ import {
 
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { useVoiceAssistant } from '@/hooks/useVoiceAssistant';
 
 const Consult = () => {
   const { isOfflineMode } = useOfflineStatus();
-
-  const [voiceName] = useState('Google हिन्दी');
-  const [language] = useState('en-US');
-
+  const [report, setReport] = useState(null)
+  const [loadingReport, setLoadingReport] = useState(false);
   const {
+    generateHealthReport,
     listening,
     loading,
     speaking,
@@ -43,7 +43,7 @@ const Consult = () => {
     setImgUrl,
     structuredResponse,
     progress,
-  } = useVoiceAssistant({ preferredVoiceName: voiceName, language });
+  } = useVoiceAssistant();
 
   const handleDrop = async (acceptedFiles) => {
     try {
@@ -58,6 +58,14 @@ const Consult = () => {
     setImgUrl([]);
   };
 
+  const generateOurHealthReport = async () => {
+    setLoadingReport(true);
+    const report = await generateHealthReport();
+    console.log("Generated Healthwawd Report:", report);
+    setReport(report);
+    setLoadingReport(false)
+  };
+
   const langOptions = useMemo(() => [
     { code: 'en-US', label: 'English (US)' },
     { code: 'en-GB', label: 'English (UK)' },
@@ -68,10 +76,36 @@ const Consult = () => {
     { code: 'hi-IN', label: 'Hindi (India)' },
   ], []);
 
-console.log(progress)
+  console.log(progress)
+
+  if (progress.text && progress.percent !== 100) {
+    return (<div className="h-full  flex items-center justify-center  text-sm font-mono overflow-hidden">
+      {/* SVG Animated Background */}
+      <svg className="absolute inset-0 w-full h-full animate-rotate opacity-10" viewBox="0 0 1440 320" preserveAspectRatio="none">
+        <path
+          fill="#3b82f6"
+          fillOpacity="1"
+          d="M0,160L60,165.3C120,171,240,181,360,165.3C480,149,600,107,720,101.3C840,96,960,128,1080,154.7C1200,181,1320,203,1380,213.3L1440,224L1440,0L1380,0C1320,0,1200,0,1080,0C960,0,840,0,720,0C600,0,480,0,360,0C240,0,120,0,60,0L0,0Z"
+        ></path>
+      </svg>
+
+      {/* Centered Text */}
+      <div className="relative z-10 animate-fade-in">
+        {progress.text || "Loading..."}
+      </div>
+    </div>)
+  }
+
+ 
+
 
   return (
     <div className="flex flex-col md:flex-row mx-auto mt-20 p-4 h-[700px] md:w-[800px]  overflow-hidden bg-background text-foreground ">
+
+      {report && <div className='markdown-body !fixed bottom-0 right-0 w-[500px] h-screen overflow-y-auto bg-white p-4 border-l'>
+        <ReactMarkdown >{report}</ReactMarkdown>
+      </div>}
+
 
       {/* Sidebar: Upload */}
       {!isOfflineMode && (
@@ -127,24 +161,6 @@ console.log(progress)
           </div>
         )}
 
-        {/* Progress Overlay */}
-        {(progress.text && progress.percent !== 100) && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 text-blue-400 text-sm font-mono overflow-hidden">
-            {/* SVG Animated Background */}
-            <svg className="absolute inset-0 w-full h-full animate-rotate opacity-10" viewBox="0 0 1440 320" preserveAspectRatio="none">
-              <path
-                fill="#3b82f6"
-                fillOpacity="1"
-                d="M0,160L60,165.3C120,171,240,181,360,165.3C480,149,600,107,720,101.3C840,96,960,128,1080,154.7C1200,181,1320,203,1380,213.3L1440,224L1440,0L1380,0C1320,0,1200,0,1080,0C960,0,840,0,720,0C600,0,480,0,360,0C240,0,120,0,60,0L0,0Z"
-              ></path>
-            </svg>
-
-            {/* Centered Text */}
-            <div className="relative z-10 animate-fade-in">
-              {progress.text || "Loading..."}
-            </div>
-          </div>
-        )}
 
 
         {/* Chat History */}
@@ -176,7 +192,6 @@ console.log(progress)
         <div className="p-6 bg-muted border-t flex justify-center gap-4">
           <Button
             variant="default"
-            size="lg"
             onClick={startListening}
             disabled={listening || loading}
             className="flex items-center gap-2"
@@ -187,13 +202,21 @@ console.log(progress)
 
           <Button
             variant="destructive"
-            size="lg"
             onClick={stopVoice}
             disabled={!listening && !loading && !speaking}
             className="flex items-center gap-2"
           >
             <MicOff className="w-4 h-4" />
             Stop
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={generateOurHealthReport}
+            disabled={!conversation || listening || loading || loadingReport}
+            className="flex items-center gap-2"
+          >
+           {loadingReport ? 'Generating Report...' : 'Generate Report'}
           </Button>
         </div>
       </div>

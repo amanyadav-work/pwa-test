@@ -10,7 +10,7 @@ export const initializeEngine = async (setEngine, setLoading, setProgress) => {
     const initProgressCallback = (progress) => {
       const percent = Math.floor(progress.progress * 100);
       const text = progress.text || "Loading model...";
-      setProgress({ text: `${text} (${percent}%) ---- Time Elapsed ${progress.timeElapsed.toFixed(2)}s`, percent });
+      setProgress({ text: `${text}`, percent });
     };
 
     const engineInstance = await CreateMLCEngine(model, {
@@ -26,7 +26,6 @@ export const initializeEngine = async (setEngine, setLoading, setProgress) => {
 };
 
 
-
 export const sendMessage = async ({
   input,
   chatLog,
@@ -34,46 +33,70 @@ export const sendMessage = async ({
   setChatLog,
   setInput,
   isStreamingRef,
-  onToken, // <-- ✅ NEW: token handler for real-time speech
+  onToken,
 }) => {
-  if (!input || !engine || isStreamingRef.current) return;
-
-  const newMessages = [
-    ...chatLog,
-    { role: "assistant", content: "" },
-  ];
-  setChatLog(newMessages);
-  setInput("");
-
-  isStreamingRef.current = true;
-
-  const chunks = await engine.chat.completions.create({
-    messages: [...chatLog, { role: "user", content: input }],
-    temperature: 0.8,
-    stream: true,
-    stream_options: { include_usage: true },
-  });
-
-  let reply = "";
-
-  for await (const chunk of chunks) {
-    const delta = chunk.choices?.[0]?.delta?.content;
-    if (delta) {
-      reply += delta;
-
-      // ✅ Emit token to external handler
-      if (onToken) {
-        onToken(delta);
-      }
-
-      // ✅ Update chat UI
-      setChatLog((prev) => {
-        const updated = [...prev];
-        updated[updated.length - 1].content = reply;
-        return updated;
-      });
-    }
+  if (!input || !engine || isStreamingRef.current) {
+    console.log("Not sending message: missing input, engine, or already streaming", { input, engine, isStreamingRef });
+    return;
   }
 
-  isStreamingRef.current = false;
+  const systemPrompt = `You are a kind and professional Indian virtual doctor. Speak in a warm, natural, and caring tone, like you're having a gentle conversation with someone you want to help. Keep your answers short and simple—between two and five sentences.
+
+Only ask questions when necessary to understand the patient's symptoms better. Don’t ask questions every time. Avoid using formal or medical language; explain things clearly and softly, like you're talking to a family member.
+
+You may suggest safe over-the-counter medicines or mild home remedies, but never strong prescriptions. If a user brings up a topic not related to health, kindly let them know you’re here only to help with health concerns.
+
+Never use bullet points, asterisks, brackets, or any formatting—just plain text. Never give formal medical reports or documentation. Your replies should always feel caring, respectful, and easy to follow.
+`
+
+  const newMessages = [...chatLog, { role: "assistant", content: "" }];
+  setChatLog(newMessages);
+  setInput("");
+  isStreamingRef.current = true;
+
+  try {
+    const chunks = await engine.chat.completions.create({
+      messages: [
+        { role: "system", content: systemPrompt },
+        ...chatLog,
+        { role: "user", content: input }
+      ],
+      temperature: 1,
+      max_completion_tokens: 1024,
+      top_p: 1,
+      stream: true,
+      stream_options: { include_usage: true },
+    });
+
+    console.log("Streaming response started...");
+
+    let reply = "";
+
+    for await (const chunk of chunks) {
+      const delta = chunk.choices?.[0]?.delta?.content;
+      if (delta) {
+        reply += delta;
+
+        if (onToken) {
+          onToken(delta);
+        }
+
+        setChatLog((prev) => {
+          const updated = [...prev];
+          updated[updated.length - 1].content = reply;
+          return updated;
+        });
+      }
+    }
+    isStreamingRef.current = false;
+  } catch (err) {
+    console.error("Streaming error:", err);
+    isStreamingRef.current = false;
+    setChatLog(prev => {
+      const updated = [...prev];
+      updated[updated.length - 1].content = "Something went wrong.";
+      return updated;
+    });
+  }
 };
+

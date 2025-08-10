@@ -6,6 +6,7 @@ import {
   BookOpen,
   Bot,
   Command,
+  DownloadIcon,
   Frame,
   GalleryVerticalEnd,
   Map,
@@ -34,6 +35,8 @@ import {
 } from "@/components/ui/sidebar"
 import { StatusBanner } from "@/context/OfflineStatusContext"
 import { Collapsible, CollapsibleTrigger } from "./ui/collapsible"
+import { useVoiceAssistant } from "@/hooks/useVoiceAssistant"
+import { cn } from "@/lib/utils"
 
 // This is sample data.
 const data = {
@@ -67,8 +70,8 @@ const data = {
       isActive: true,
       items: [
         {
-          title: "History",
-          url: "#",
+          title: "Dashboard",
+          url: "/dashboard",
         },
         {
           title: "Starred",
@@ -168,6 +171,18 @@ const data = {
 export function AppSidebar({
   ...props
 }) {
+  const { progress, isModelCached, downloadModel } = useVoiceAssistant();
+
+const [isModelDownloaded, setIsModelDownloaded] = React.useState(false);
+
+  React.useEffect(() => {
+    const checkModel = async () => {
+      const cached = await isModelCached();
+      setIsModelDownloaded(cached);
+    };
+    checkModel();
+  }, [isModelCached]);
+
   return (
     <Sidebar collapsible="icon" {...props} className="border-t-2">
       <SidebarHeader>
@@ -177,7 +192,7 @@ export function AppSidebar({
         <NavMain items={data.navMain} />
         <NavProjects projects={data.projects} />
         <SidebarGroup>
-          <SidebarGroupLabel>Application</SidebarGroupLabel>
+          <SidebarGroupLabel>Offline Support</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <Collapsible
@@ -186,12 +201,15 @@ export function AppSidebar({
                 className="group/collapsible">
                 <SidebarMenuItem >
                   <CollapsibleTrigger asChild>
-                    <SidebarMenuButton asChild>
-                      <div>
-                        <OctagonAlertIcon />
-                        <StatusBanner />
+                    <SidebarMenuButton asChild onClick={downloadModel}>
+                      <div className={`border`}>
+                        <DownloadIcon className="mr-2 h-4 w-4" />
+                        {(progress.text && progress.percent !== 100)
+                          ? `'Downloading... (${progress.percent}%)`
+                          : "Download/Setup Offline Mode"}
                       </div>
                     </SidebarMenuButton>
+
                   </CollapsibleTrigger>
                 </SidebarMenuItem>
               </Collapsible>
@@ -200,6 +218,12 @@ export function AppSidebar({
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
+
+        {(progress.text && progress.percent !== 100) && (
+          <div className="text-xs animate-fade-in truncate overflow-ellipsis">
+            {progress.text || "Loading..."}
+          </div>
+        )}
         <NavUser user={data.user} />
       </SidebarFooter>
       <SidebarRail />
